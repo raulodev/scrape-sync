@@ -35,12 +35,10 @@ def create_google_credential_file():
 
 def write_to_sheet(new_values: list):
 
-    # Authenticate and create a service object.
     gc = gspread.oauth(scopes=SCOPES, authorized_user_filename="token.json")
     sheet = gc.open_by_key(SPREADSHEET_ID)
     worksheet = sheet.get_worksheet(0)
 
-    # Update the title of the sheet
     sheet.update_title(f"Citas - {datetime.now().strftime('%d/%m/%Y')}")
 
     current_values = worksheet.get_values("A:F")

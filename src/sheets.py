@@ -14,7 +14,7 @@ from settings import SPREADSHEET_ID
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
-def create_credential_file():
+def create_google_credential_file():
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first

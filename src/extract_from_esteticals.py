@@ -52,77 +52,90 @@ def extract_from_esteticals():
 
         print("✅ Vista semanal activada")
 
-        page.wait_for_selector(".mbsc-schedule-time-cont-inner")
-        page.wait_for_selector(".mbsc-schedule-event")
+        for week in range(1, 13):
 
-        events = page.query_selector_all(".mbsc-schedule-event")
+            print(f"Semana {week}")
 
-        print(f"🔍 Citas detectadas: {len(events)}")
-
-        for index, event in enumerate(events, start=1):
+            page.wait_for_selector(".mbsc-schedule-time-cont-inner")
 
             try:
+                page.wait_for_selector(".mbsc-schedule-event")
+            except TimeoutError:
+                print("❌ No se encontraron citas en esta semana")
+                page.get_by_role("button", name="Next page").click()
+                continue
 
-                event.click()
+            events = page.query_selector_all(".mbsc-schedule-event")
 
-                service = (
-                    page.locator(".modal-body")
-                    .get_by_text(re.compile(r"Servicio:.*"))
-                    .text_content()
-                    .removeprefix("Servicio:")
-                    .strip()
-                )
+            print(f"🔍 Citas detectadas: {len(events)}")
 
-                date = (
-                    page.locator(".modal-body")
-                    .get_by_text("Hora")
-                    .locator("..")
-                    .text_content()
-                    .removeprefix("Hora")
-                )
+            for index, event in enumerate(events, start=1):
 
-                therapist = (
-                    page.locator(".modal-body")
-                    .get_by_text("Emplead@", exact=True)
-                    .locator("..")
-                    .text_content()
-                    .removeprefix("Emplead@")
-                )
-                patient = (
-                    page.locator(".modal-body")
-                    .get_by_text("Usuari@", exact=True)
-                    .locator("..")
-                    .text_content()
-                    .removeprefix("Usuari@")
-                )
+                try:
 
-                phone = (
-                    page.locator(".modal-body")
-                    .get_by_text("Teléfono")
-                    .locator("..")
-                    .text_content()
-                    .removeprefix("Teléfono")
-                )
+                    event.click()
 
-                new_event = {
-                    "id": f"{date}-{therapist}",
-                    "date": date,
-                    "service": service,
-                    "patient": patient,
-                    "therapist": therapist,
-                    "phone": phone,
-                }
+                    service = (
+                        page.locator(".modal-body")
+                        .get_by_text(re.compile(r"Servicio:.*"))
+                        .text_content()
+                        .removeprefix("Servicio:")
+                        .strip()
+                    )
 
-                print(f"✅ Cita {index} extraída: {new_event}")
+                    date = (
+                        page.locator(".modal-body")
+                        .get_by_text("Hora")
+                        .locator("..")
+                        .text_content()
+                        .removeprefix("Hora")
+                    )
 
-                extracted_events.append(new_event)
+                    therapist = (
+                        page.locator(".modal-body")
+                        .get_by_text("Emplead@", exact=True)
+                        .locator("..")
+                        .text_content()
+                        .removeprefix("Emplead@")
+                    )
+                    patient = (
+                        page.locator(".modal-body")
+                        .get_by_text("Usuari@", exact=True)
+                        .locator("..")
+                        .text_content()
+                        .removeprefix("Usuari@")
+                    )
 
-                page.locator(
-                    ".modal-content > div > .modal-header > .btn"
-                ).dispatch_event("click")
+                    phone = (
+                        page.locator(".modal-body")
+                        .get_by_text("Teléfono")
+                        .locator("..")
+                        .text_content()
+                        .removeprefix("Teléfono")
+                    )
 
-            except TimeoutError as exc:
-                print(f"⚠️ No se pudo extraer la cita {index}: {exc.message} ")
+                    new_event = {
+                        "id": f"{date}-{therapist}",
+                        "date": date,
+                        "service": service,
+                        "patient": patient,
+                        "therapist": therapist,
+                        "phone": phone,
+                    }
+
+                    if new_event not in extracted_events:
+
+                        print(f"✅ Cita {index} extraída: {new_event}")
+                        extracted_events.append(new_event)
+
+                    page.locator(
+                        ".modal-content > div > .modal-header > .btn"
+                    ).dispatch_event("click")
+
+                except TimeoutError as exc:
+                    print(f"⚠️ No se pudo extraer la cita {index}: {exc.message} ")
+
+            page.get_by_role("button", name="Next page").click()
 
         context.close()
 

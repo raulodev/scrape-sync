@@ -83,13 +83,18 @@ def extract_from_esteticals():
                         .strip()
                     )
 
-                    date = (
+                    date_raw = (
                         page.locator(".modal-body")
                         .get_by_text("Hora")
                         .locator("..")
                         .text_content()
                         .removeprefix("Hora")
+                        .split(",")
                     )
+
+                    date = date_raw[0].strip()
+
+                    start_time = date_raw[1].split("-")[0].strip()
 
                     therapist = (
                         page.locator(".modal-body")
@@ -117,6 +122,7 @@ def extract_from_esteticals():
                     new_event = {
                         "id": f"{date}-{therapist}",
                         "date": date,
+                        "start_time": start_time,
                         "service": service,
                         "patient": patient,
                         "therapist": therapist,

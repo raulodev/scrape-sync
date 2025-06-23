@@ -41,11 +41,19 @@ def write_to_sheet(new_values: list):
 
     sheet.update_title(f"Citas - {datetime.now().strftime('%d/%m/%Y')}")
 
-    current_values = worksheet.get_values("A:F")
+    current_values = worksheet.get_values("A:G")
 
     df = pd.DataFrame(
         current_values[1:],
-        columns=("id", "date", "service", "patient", "therapist", "phone"),
+        columns=(
+            "id",
+            "date",
+            "start_time",
+            "service",
+            "patient",
+            "therapist",
+            "phone",
+        ),
     )
 
     new_df = pd.DataFrame(new_values)

@@ -6,7 +6,7 @@ from playwright.sync_api import TimeoutError, sync_playwright
 
 from settings import EMAIL, PASSWORD
 
-citas_extraidas = []
+extracted_events = []
 
 
 def extract_from_esteticals():
@@ -16,8 +16,6 @@ def extract_from_esteticals():
         browser = playwright.chromium.launch(headless=False)
 
         context = browser.new_context()
-
-        context.set_default_timeout(60 * 1000)
 
         page = context.new_page()
 
@@ -61,65 +59,71 @@ def extract_from_esteticals():
 
         print(f"🔍 Citas detectadas: {len(events)}")
 
-        for event in events:
+        for index, event in enumerate(events, start=1):
 
-            event.click()
+            try:
 
-            servicio = (
-                page.locator(".modal-body")
-                .get_by_text(re.compile(r"Servicio:.*"))
-                .text_content()
-                .removeprefix("Servicio:")
-                .strip()
-            )
+                event.click()
 
-            if servicio.lower() in ["", "bloqueado"]:
-                continue
+                service = (
+                    page.locator(".modal-body")
+                    .get_by_text(re.compile(r"Servicio:.*"))
+                    .text_content()
+                    .removeprefix("Servicio:")
+                    .strip()
+                )
 
-            fecha = (
-                page.locator(".modal-body")
-                .get_by_text("Hora")
-                .locator("..")
-                .text_content()
-                .removeprefix("Hora")
-            )
+                date = (
+                    page.locator(".modal-body")
+                    .get_by_text("Hora")
+                    .locator("..")
+                    .text_content()
+                    .removeprefix("Hora")
+                )
 
-            terapeuta = (
-                page.locator(".modal-body")
-                .get_by_text("Emplead@", exact=True)
-                .locator("..")
-                .text_content()
-                .removeprefix("Emplead@")
-            )
-            paciente = (
-                page.locator(".modal-body")
-                .get_by_text("Usuari@", exact=True)
-                .locator("..")
-                .text_content()
-                .removeprefix("Usuari@")
-            )
+                therapist = (
+                    page.locator(".modal-body")
+                    .get_by_text("Emplead@", exact=True)
+                    .locator("..")
+                    .text_content()
+                    .removeprefix("Emplead@")
+                )
+                patient = (
+                    page.locator(".modal-body")
+                    .get_by_text("Usuari@", exact=True)
+                    .locator("..")
+                    .text_content()
+                    .removeprefix("Usuari@")
+                )
 
-            telefono = (
-                page.locator(".modal-body")
-                .get_by_text("Teléfono")
-                .locator("..")
-                .text_content()
-                .removeprefix("Teléfono")
-            )
+                phone = (
+                    page.locator(".modal-body")
+                    .get_by_text("Teléfono")
+                    .locator("..")
+                    .text_content()
+                    .removeprefix("Teléfono")
+                )
 
-            citas_extraidas.append(
-                {
-                    "id": f"{fecha}-{terapeuta}",
-                    "date": fecha,
-                    "service": servicio,
-                    "patient": paciente,
-                    "therapist": terapeuta,
-                    "phone": telefono,
+                new_event = {
+                    "id": f"{date}-{therapist}",
+                    "date": date,
+                    "service": service,
+                    "patient": patient,
+                    "therapist": therapist,
+                    "phone": phone,
                 }
-            )
 
-            page.locator(".modal-content > div > .modal-header > .btn").click()
+                print(f"✅ Cita {index} extraída: {new_event}")
+
+                extracted_events.append(new_event)
+
+                page.locator(
+                    ".modal-content > div > .modal-header > .btn"
+                ).dispatch_event("click")
+
+            except TimeoutError as exc:
+                print(f"⚠️ No se pudo extraer la cita {index}: {exc.message} ")
 
         context.close()
 
-    return citas_extraidas
+    return extracted_events

@@ -9,9 +9,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from gspread_dataframe import set_with_dataframe
 
-from settings import SPREADSHEET_ID
-
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+from settings import SPREADSHEET_ID, SCOPES
 
 
 def create_google_credential_file():

@@ -83,6 +83,12 @@ def extract_from_esteticals():
                         .strip()
                     )
 
+                    if service in ["", "Bloqueado"]:
+                        page.locator(
+                            ".modal-content > div > .modal-header > .btn"
+                        ).dispatch_event("click")
+                        continue
+
                     date_raw = (
                         page.locator(".modal-body")
                         .get_by_text("Hora")
@@ -109,6 +115,7 @@ def extract_from_esteticals():
                         .locator("..")
                         .text_content()
                         .removeprefix("Usuari@")
+                        .title()
                     )
 
                     phone = (

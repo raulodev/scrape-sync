@@ -127,7 +127,7 @@ def extract_from_esteticals():
                     )
 
                     new_event = {
-                        "id": f"{date}-{therapist}",
+                        "id": f"{date}-{therapist}-{start_time}",
                         "date": date,
                         "start_time": start_time,
                         "service": service,

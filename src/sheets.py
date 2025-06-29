@@ -31,13 +31,20 @@ def create_google_credential_file():
             token.write(creds.to_json())
 
 
-def write_to_sheet(new_values: list):
+def get_worksheet():
 
     gc = gspread.oauth(scopes=SCOPES, authorized_user_filename="token.json")
+
     sheet = gc.open_by_key(SPREADSHEET_ID)
-    worksheet = sheet.get_worksheet(0)
 
     sheet.update_title(f"Citas - {datetime.now().strftime('%d/%m/%Y')}")
+
+    return sheet.get_worksheet(0)
+
+
+def write_to_sheet(new_values: list):
+
+    worksheet = get_worksheet()
 
     current_values = worksheet.get_values("A:G")
 
@@ -65,11 +72,7 @@ def write_to_sheet(new_values: list):
 
 def write_to_sheet_from_gohighlevel(new_values: list):
 
-    gc = gspread.oauth(scopes=SCOPES, authorized_user_filename="token.json")
-    sheet = gc.open_by_key(SPREADSHEET_ID)
-    worksheet = sheet.get_worksheet(0)
-
-    sheet.update_title(f"Citas - {datetime.now().strftime('%d/%m/%Y')}")
+    worksheet = get_worksheet()
 
     current_values = worksheet.get_values("A:I")
 

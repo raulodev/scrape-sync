@@ -1,0 +1,215 @@
+# pylint: disable=import-error
+from datetime import datetime, timedelta
+
+import gspread
+import pytz
+import requests
+
+from settings import GOHIGHLEVEL_TOKEN, SCOPES, SPREADSHEET_ID
+from sheets import write_to_sheet_from_gohighlevel
+
+CALENDARS = {
+    "Osteopatia": "0LsiMmC6Qgu9YANgSC9t",
+    "Osteopatia (cita pagada)": "0LsiMmC6Qgu9YANgSC9t",
+    "Fisioterapia y rehabilitacion": "81q3TF7Z990qi0RQjwC5",
+    "Fisioterapia y rehabilitacion (cita pagada)": "81q3TF7Z990qi0RQjwC5",
+    "terapia emocional - quiromasaje relajante.": "OfI653Xo0PJR7B5Io6fh",
+    "terapia emocional - quiromasaje relajante. (cita pagada)": "OfI653Xo0PJR7B5Io6fh",
+    "Suelo pelvico": "D2O9n9zSTrFjZsmm2U5M",
+    # Estos servicios no existem en las citas extraidas
+    "Ejercicios terapéuticos": "Pj5tSBOcAI9SCqDxBdm4",
+    "Vértigo": "STaC7Z0nviRMzckclxk7",
+    "Terapia Integral": "k1UMisxdlgNZNzcIYBZe",
+}
+
+THERAPISTS = {
+    "Eva": "4WKfQtBE0JMTSW4xxWYI",
+    "Ignacio": "r09hwVy9i62kzuGMHV2s",
+    "Isidro Resa": "bbB8jnGwXt0DqYk3ip1F",
+    "David Llamas": "bvjMSA8eS7K73CEAD6Hf",
+    "Fadma Terapias": "v3fTGfmV9gGNYCvs9wDZ",
+}
+
+TIMEZONE = "Europe/Berlin"
+
+DURATION_MINUTES = 55
+
+
+def search_contact(name: str):
+
+    url = "https://rest.gohighlevel.com/v1/contacts/"
+
+    querystring = {"query": name}
+
+    headers = {"authorization": f"Bearer {GOHIGHLEVEL_TOKEN}"}
+
+    response = requests.get(url, headers=headers, params=querystring, timeout=10)
+
+    data = response.json()
+
+    contact = None
+    for row in data.get("contacts", []):
+        contact = row
+        break
+
+    return contact
+
+
+def create_contact(name: str, phone: str):
+
+    url = "https://rest.gohighlevel.com/v1/contacts/"
+
+    headers = {"authorization": f"Bearer {GOHIGHLEVEL_TOKEN}"}
+
+    phone = phone if phone.startswith("+") else f"+34{phone}"
+
+    payload = {"name": name, "phone": phone}
+
+    response = requests.post(url, headers=headers, json=payload, timeout=10)
+
+    data = response.json()
+
+    return data.get("contact", None)
+
+
+def get_appointment(appointment_id: str):
+
+    # Api reference: https://public-api.gohighlevel.com/#52afdbbd-8558-4c2d-bc0f-fc1f88c82503
+
+    url = f"https://rest.gohighlevel.com/v1/appointments/{appointment_id}"
+
+    headers = {"authorization": f"Bearer {GOHIGHLEVEL_TOKEN}"}
+
+    response = requests.get(url, headers=headers, timeout=10)
+
+    return response.json()
+
+
+def create_appointment(
+    contact: dict, calendar_id: str, therapist_id: str, start_time: str, service: str
+):
+    # Api reference: https://public-api.gohighlevel.com/#1e0867c3-69da-4240-9427-e1286b79472f
+
+    url = "https://rest.gohighlevel.com/v1/appointments/"
+
+    headers = {"authorization": f"Bearer {GOHIGHLEVEL_TOKEN}"}
+
+    selected_slot = pytz.timezone("Europe/Berlin").localize(
+        datetime.strptime(start_time, "%d/%m/%Y-%H:%M")
+    )
+
+    end_at = selected_slot + timedelta(minutes=DURATION_MINUTES)
+
+    payload = {
+        "phone": contact.get("phone"),
+        "selectedSlot": selected_slot.isoformat(),
+        "endAt": end_at.isoformat(),
+        "selectedTimezone": TIMEZONE,
+        "calendarId": calendar_id,
+        "userId": therapist_id,
+        "title": f"Cita automática – {service}",
+    }
+
+    response = requests.post(url, headers=headers, json=payload, timeout=10)
+
+    if response.status_code != 200:
+        print(f"❌ Error al crear cita: {response.text}")
+        return None
+
+    data = response.json()
+
+    return data.get("id")
+
+
+def read_from_sheet(range_name="A:G"):
+
+    gc = gspread.oauth(scopes=SCOPES, authorized_user_filename="token.json")
+
+    sheet = gc.open_by_key(SPREADSHEET_ID)
+
+    worksheet = sheet.get_worksheet(0)
+
+    return worksheet.get_values(range_name)
+
+
+def add_cols():
+
+    gc = gspread.oauth(scopes=SCOPES, authorized_user_filename="token.json")
+
+    sheet = gc.open_by_key(SPREADSHEET_ID)
+
+    worksheet = sheet.get_worksheet(0)
+
+    headers = worksheet.row_values(1)
+
+    if "appointment_id" not in headers:
+
+        worksheet.add_cols(1)
+        worksheet.update_cell(1, len(headers) + 1, "appointment_id")
+        headers.append("appointment_id")
+
+    if "last_checked" not in headers:
+
+        worksheet.add_cols(1)
+        worksheet.update_cell(1, len(headers) + 1, "last_checked")
+
+
+def register_appointment():
+
+    add_cols()
+    appointments = read_from_sheet("A:I")[1:]
+
+    for appointment in appointments:
+
+        date = appointment[1]
+        start_time = appointment[2]
+        service = appointment[3]
+        patient = appointment[4].title()
+        therapits = appointment[5]
+        phone = appointment[6]
+        appointment_id = appointment[7]
+        calendar_id = CALENDARS.get(service)
+        therapist_id = THERAPISTS.get(therapits)
+
+        if appointment_id:
+            print(f"✅ Cita ya creada: {appointment_id}")
+            continue
+
+        if not calendar_id:
+            print(f"⚠️ No se encontró calendario para {service}")
+            continue
+
+        try:
+            contact = search_contact(patient)
+        except Exception as exc:
+            print(f"⚠️ Error al buscar contacto para {patient}: {exc}")
+            continue
+
+        if not contact:
+            print(f"✖️  No fue encontrado un contacto para {patient}")
+
+            attempts = 0
+            while not contact and attempts < 5:
+                try:
+                    contact = create_contact(patient, phone)
+                    print(f"✅ Se creó el contacto {contact}")
+                    break
+                except Exception as exc:
+                    print(f"⚠️ Error al crear contacto para {patient}: {exc}")
+                attempts += 1
+
+        try:
+
+            new_appointment_id = create_appointment(
+                contact, calendar_id, therapist_id, f"{date}-{start_time}", service
+            )
+            if new_appointment_id:
+                appointment[7] = new_appointment_id
+                print(f"✅ Se creó la cita: {new_appointment_id}")
+        except Exception as exc:
+            print(f"⚠️ Error al crear la cita: {exc}")
+
+    write_to_sheet_from_gohighlevel(appointments)
+
+
+register_appointment()

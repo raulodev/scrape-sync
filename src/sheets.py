@@ -61,3 +61,38 @@ def write_to_sheet(new_values: list):
     set_with_dataframe(worksheet, df)
 
     print("✅ Datos actualizados")
+
+
+def write_to_sheet_from_gohighlevel(new_values: list):
+
+    gc = gspread.oauth(scopes=SCOPES, authorized_user_filename="token.json")
+    sheet = gc.open_by_key(SPREADSHEET_ID)
+    worksheet = sheet.get_worksheet(0)
+
+    sheet.update_title(f"Citas - {datetime.now().strftime('%d/%m/%Y')}")
+
+    current_values = worksheet.get_values("A:I")
+
+    columns = (
+        "id",
+        "date",
+        "start_time",
+        "service",
+        "patient",
+        "therapist",
+        "phone",
+        "appointment_id",
+        "last_checked",
+    )
+
+    old_df = pd.DataFrame(current_values[1:], columns=columns)
+
+    new_df = pd.DataFrame(new_values, columns=columns)
+
+    df = pd.concat(
+        [old_df[~old_df["id"].isin(new_df["id"])], new_df], ignore_index=True
+    )
+
+    set_with_dataframe(worksheet, df)
+
+    print("✅ Datos actualizados")

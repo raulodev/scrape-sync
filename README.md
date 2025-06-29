@@ -28,7 +28,7 @@ Scrape events from a [website](https://reservas.estetical.es) using Playwright
 7. Run script:
 
     ```console
-    python3 src/main.py
+    python src/main.py --help
     ```
 
 

@@ -210,6 +210,3 @@ def register_appointment():
             print(f"⚠️ Error al crear la cita: {exc}")
 
     write_to_sheet_from_gohighlevel(appointments)
-
-
-register_appointment()

@@ -6,7 +6,7 @@ import pytz
 import requests
 
 from settings import GOHIGHLEVEL_TOKEN, SCOPES, SPREADSHEET_ID
-from sheets import write_to_sheet_from_gohighlevel
+from sheets import get_worksheet, write_to_sheet_from_gohighlevel
 
 CALENDARS = {
     "Osteopatia": "0LsiMmC6Qgu9YANgSC9t",
@@ -121,15 +121,33 @@ def create_appointment(
     return data.get("id")
 
 
-def read_from_sheet(range_name="A:G"):
+def update_appointments(appointment_id: str, title: str, start_time: str):
 
-    gc = gspread.oauth(scopes=SCOPES, authorized_user_filename="token.json")
+    # Api reference: https://public-api.gohighlevel.com/#7c257ce6-c73a-4cb3-957b-ddbd99dfbd86
 
-    sheet = gc.open_by_key(SPREADSHEET_ID)
+    url = f"https://rest.gohighlevel.com/v1/appointments/{appointment_id}"
 
-    worksheet = sheet.get_worksheet(0)
+    headers = {"authorization": f"Bearer {GOHIGHLEVEL_TOKEN}"}
 
-    return worksheet.get_values(range_name)
+    selected_slot = pytz.timezone("Europe/Berlin").localize(
+        datetime.strptime(start_time, "%d/%m/%Y-%H:%M")
+    )
+
+    payload = {
+        "title": title,
+        "selectedSlot": selected_slot.isoformat(),
+        "selectedTimezone": TIMEZONE,
+    }
+
+    response = requests.put(url, headers=headers, json=payload, timeout=10)
+
+    if response.status_code != 200:
+        print(f"❌ Error al actualizar cita: {response.text}")
+        return None
+
+    data = response.json()
+
+    return data.get("id")
 
 
 def add_cols():
@@ -157,7 +175,10 @@ def add_cols():
 def register_appointment():
 
     add_cols()
-    appointments = read_from_sheet("A:I")[1:]
+
+    worksheet = get_worksheet()
+
+    appointments = worksheet.get_values("A:I")[1:]
 
     for appointment in appointments:
 
@@ -210,3 +231,32 @@ def register_appointment():
             print(f"⚠️ Error al crear la cita: {exc}")
 
     write_to_sheet_from_gohighlevel(appointments)
+
+
+def correct_spelling(service: str):
+
+    match service:
+
+        case "Osteopatia":
+            return "Osteopatía"
+
+        case "Osteopatia (cita pagada)":
+            return "Osteopatía (cita pagada)"
+
+        case "Fisioterapia y rehabilitacion":
+            return "Fisioterapia"
+
+        case "Fisioterapia y rehabilitacion (cita pagada)":
+            return "Fisioterapia (cita pagada)"
+
+        case "terapia emocional - quiromasaje relajante.":
+            return "Terapia emocional - quiromasaje relajante"
+
+        case "terapia emocional - quiromasaje relajante. (cita pagada)":
+            return "Terapia emocional - quiromasaje relajante (cita pagada)"
+
+        case "Suelo pelvico":
+            return "Suelo pélvico"
+
+        case _:
+            return service

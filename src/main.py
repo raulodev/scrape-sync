@@ -15,7 +15,7 @@ from gohighlevel import (
 from sheets import (
     create_google_credential_file,
     get_worksheet,
-    write_to_sheet,
+    write_to_sheet_from_estetical,
     write_to_sheet_from_gohighlevel,
 )
 
@@ -34,7 +34,7 @@ def extract():
     """Extract appointments from Estetical website"""
     create_google_credential_file()
     data = extract_from_esteticals()
-    write_to_sheet(data)
+    write_to_sheet_from_estetical(data)
 
 
 @app.command()

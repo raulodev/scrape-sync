@@ -1,5 +1,6 @@
 # pylint: disable=import-error
-import os.path
+import enum
+import os
 from datetime import datetime
 
 import gspread
@@ -9,7 +10,13 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from gspread_dataframe import set_with_dataframe
 
-from settings import SPREADSHEET_ID, SCOPES
+from settings import SCOPES, SPREADSHEET_ID
+
+
+class State(str, enum.Enum):
+    NEW = "New"
+    MODIFIED = "Modified"
+    CANCELLED = "Cancelled"
 
 
 def create_google_credential_file():
@@ -42,7 +49,7 @@ def get_worksheet():
     return sheet.get_worksheet(0)
 
 
-def write_to_sheet(new_values: list):
+def write_to_sheet_from_estetical(new_values: list):
 
     worksheet = get_worksheet()
 

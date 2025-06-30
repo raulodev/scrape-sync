@@ -1,6 +1,7 @@
 # scrape-sync
 
-Scrape events from a [website](https://reservas.estetical.es) using Playwright
+Scrape events from a [website](https://reservas.estetical.es) using Playwright 
+and use google sheets to store the data.
 
 ## Quickstart
 

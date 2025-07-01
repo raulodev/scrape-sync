@@ -185,23 +185,11 @@ def write_to_sheet_from_gohighlevel(new_values: list):
 
     worksheet = get_worksheet()
 
-    current_values = worksheet.get_values("A:I")
+    current_values = worksheet.get_values("A:J")
 
-    columns = (
-        "id",
-        "date",
-        "start_time",
-        "service",
-        "patient",
-        "therapist",
-        "phone",
-        "appointment_id",
-        "last_checked",
-    )
+    old_df = pd.DataFrame(current_values[1:], columns=current_values[0])
 
-    old_df = pd.DataFrame(current_values[1:], columns=columns)
-
-    new_df = pd.DataFrame(new_values, columns=columns)
+    new_df = pd.DataFrame(new_values, columns=current_values[0])
 
     df = pd.concat(
         [old_df[~old_df["id"].isin(new_df["id"])], new_df], ignore_index=True

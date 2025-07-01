@@ -45,7 +45,11 @@ def register():
 
     worksheet = get_worksheet()
 
-    appointments = worksheet.get_values("A:I")[1:]
+    appointments = worksheet.get_values("A:J")[1:]
+
+    without_calendar = 0
+    already_registered = 0
+    new_registered = 0
 
     for appointment in appointments:
 
@@ -53,18 +57,19 @@ def register():
         start_time = appointment[2]
         service = appointment[3]
         patient = appointment[4].title()
-        therapits = appointment[5]
+        therapists = appointment[5]
         phone = appointment[6]
         appointment_id = appointment[7]
         calendar_id = CALENDARS.get(service)
-        therapist_id = THERAPISTS.get(therapits)
+        therapist_id = THERAPISTS.get(therapists)
 
         if appointment_id:
-            print(f"✅ Cita ya creada: {appointment_id}")
+            already_registered += 1
             continue
 
         if not calendar_id:
             print(f"⚠️ No se encontró calendario para {service}")
+            without_calendar += 1
             continue
 
         try:
@@ -88,46 +93,24 @@ def register():
 
         try:
 
+            title = f"{correct_spelling(service)} - {patient} - {therapists}"
+
             new_appointment_id = create_appointment(
-                contact, calendar_id, therapist_id, f"{date}-{start_time}", service
+                contact, calendar_id, therapist_id, f"{date}-{start_time}", title
             )
+
             if new_appointment_id:
                 appointment[7] = new_appointment_id
                 print(f"✅ Se creó la cita: {new_appointment_id}")
+                new_registered += 1
         except Exception as exc:
             print(f"⚠️ Error al crear la cita: {exc}")
 
+    print(f"✅ Se registraron {new_registered} citas nuevas")
+    print(f"✅ Se encontraron {already_registered} citas ya registradas")
+    print(f"⚠️ Se encontraron {without_calendar} citas sin calendario en GoHighLevel")
+
     write_to_sheet_from_gohighlevel(appointments)
-
-
-@app.command()
-def update_appointments_title():
-    """Update title of sheet with appointments"""
-    create_google_credential_file()
-
-    worksheet = get_worksheet()
-
-    values = worksheet.get_all_values("A:H")[1:]
-
-    for row in values:
-
-        appointment_id = row[7]
-
-        if not appointment_id:
-            continue
-
-        date = row[1]
-        start_time = row[2]
-        service = row[3]
-        patient = row[4].title()
-        therapists = row[5]
-
-        title = f"{correct_spelling(service)} - {patient} - {therapists}"
-
-        is_updated = update_appointments(appointment_id, title, f"{date}-{start_time}")
-
-        if is_updated:
-            print(f"✅ Actualizado titulo para {appointment_id}")
 
 
 if __name__ == "__main__":

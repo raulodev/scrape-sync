@@ -85,7 +85,7 @@ def get_appointment(appointment_id: str):
 
 
 def create_appointment(
-    contact: dict, calendar_id: str, therapist_id: str, start_time: str, service: str
+    contact: dict, calendar_id: str, therapist_id: str, start_time: str, title: str
 ):
     # Api reference: https://public-api.gohighlevel.com/#1e0867c3-69da-4240-9427-e1286b79472f
 
@@ -106,7 +106,7 @@ def create_appointment(
         "selectedTimezone": TIMEZONE,
         "calendarId": calendar_id,
         "userId": therapist_id,
-        "title": f"Cita automática – {service}",
+        "title": title,
     }
 
     response = requests.post(url, headers=headers, json=payload, timeout=10)

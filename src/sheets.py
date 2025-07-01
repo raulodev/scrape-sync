@@ -17,6 +17,7 @@ class State(str, enum.Enum):
     NEW = "New"
     MODIFIED = "Modified"
     CANCELLED = "Cancelled or Outdated"
+    UNCHANGED = "Unchanged"
 
 
 def create_google_credential_file():

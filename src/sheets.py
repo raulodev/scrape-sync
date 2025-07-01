@@ -102,80 +102,47 @@ def write_to_sheet_from_estetical(new_values: list):
             # If there is new info
             elif not new_info.empty:
 
-                new_date = new_info.values[0][1]
+                date = new_info.values[0][1]
                 start_time = new_info.values[0][2]
                 service = new_info.values[0][3]
                 patient = new_info.values[0][4]
                 therapist = new_info.values[0][5]
                 phone = new_info.values[0][6]
 
+                new_data = {
+                    "date": date,
+                    "start_time": start_time,
+                    "service": service,
+                    "patient": patient,
+                    "therapist": therapist,
+                    "phone": phone,
+                }
+
                 modified_columns = []
 
-                if new_date != current.get("date"):
-                    current_df.at[index, "date"] = new_date
+                if date != current.get("date"):
+                    current_df.at[index, "date"] = date
                     modified_columns.append("date")
-                    print(
-                        "✏️ Fecha modificada:",
-                        new_id,
-                        current.get("date"),
-                        "->",
-                        new_date,
-                    )
 
                 if current.get("start_time") not in start_time:
                     current_df.at[index, "start_time"] = start_time
                     modified_columns.append("start_time")
-                    print(
-                        "✏️ Hora modificada:",
-                        new_id,
-                        current.get("start_time"),
-                        "->",
-                        start_time,
-                    )
 
                 if service != current.get("service"):
                     current_df.at[index, "service"] = service
                     modified_columns.append("service")
-                    print(
-                        "✏️ Servicio modificado:",
-                        new_id,
-                        current.get("service"),
-                        "->",
-                        service,
-                    )
 
                 if patient != current.get("patient"):
                     current_df.at[index, "patient"] = patient
                     modified_columns.append("patient")
-                    print(
-                        "✏️ Paciente modificado:",
-                        new_id,
-                        current.get("patient"),
-                        "->",
-                        patient,
-                    )
 
                 if therapist != current.get("therapist"):
                     current_df.at[index, "therapist"] = therapist
                     modified_columns.append("therapist")
-                    print(
-                        "✏️ Terapeuta modificada:",
-                        new_id,
-                        current.get("therapist"),
-                        "->",
-                        therapist,
-                    )
 
                 if current.get("phone") not in phone:
                     current_df.at[index, "phone"] = phone
                     modified_columns.append("phone")
-                    print(
-                        "✏️ Teléfono modificado:",
-                        new_id,
-                        current.get("phone"),
-                        "->",
-                        phone,
-                    )
 
                 new_status = f"{State.MODIFIED.value} - {modified_columns}"
 
@@ -185,7 +152,16 @@ def write_to_sheet_from_estetical(new_values: list):
                         "%d/%m/%Y  %H:%M"
                     )
                     current_df.at[index, "status"] = new_status
-                    print(f"✏️ Cita modificada: {new_id}")
+
+                    changes = []
+
+                    for column in modified_columns:
+
+                        changes.append(
+                            f"    {column}: {current.get(column)} -> {new_data.get(column)}\n"
+                        )
+
+                    print(f"✏️ Cita modificada: {new_id}\n{"".join(changes)}")
 
         # Add new appointments
         for index, new in new_df.iterrows():

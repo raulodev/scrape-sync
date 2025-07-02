@@ -15,9 +15,9 @@ from settings import SCOPES, SPREADSHEET_ID
 
 class State(str, enum.Enum):
     NEW = "New"
-    MODIFIED = "Modified"
+    MODIFIED = "Modified"  # when the row is updated from estetical website
     CANCELLED = "Cancelled or Outdated"
-    UNCHANGED = "Unchanged"
+    UNCHANGED = "Unchanged"  # When the row modified is saved in gohighlevel
 
 
 def create_google_credential_file():

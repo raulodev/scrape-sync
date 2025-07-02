@@ -1,11 +1,11 @@
 # pylint: disable=import-error
+import json
 from datetime import datetime, timedelta
 
-import gspread
 import pytz
 import requests
 
-from settings import GOHIGHLEVEL_TOKEN, SCOPES, SPREADSHEET_ID
+from settings import GOHIGHLEVEL_TOKEN
 
 CALENDARS = {
     "Osteopatia": "0LsiMmC6Qgu9YANgSC9t",
@@ -113,6 +113,7 @@ def create_appointment(
 
     if response.status_code != 200:
         print(f"❌ Error al crear cita: {response.text}")
+        print(json.dumps(payload, indent=4))
         return None
 
     data = response.json()
@@ -120,55 +121,85 @@ def create_appointment(
     return data.get("id")
 
 
-def update_appointments(appointment_id: str, title: str, start_time: str):
+def update_appointments(
+    appointment_id: str,
+    start_time: str,
+    title: str,
+    calendar_id: str,
+    contact: dict,
+    therapist_id: str,
+):
 
     # Api reference: https://public-api.gohighlevel.com/#7c257ce6-c73a-4cb3-957b-ddbd99dfbd86
+
+    appointment = get_appointment(appointment_id)
+
+    if appointment.get("contactId") != contact.get("id"):
+
+        print(f"⚠️ Contacto cambiado para la cita {appointment_id}")
+
+        print(
+            appointment.get("contact").get("fullNameLowerCase"),
+            "->",
+            contact.get("contactName"),
+        )
+
+        is_deleted = delete_appointment(appointment_id)
+
+        if is_deleted:
+            new_appointment_id = create_appointment(
+                contact, calendar_id, therapist_id, start_time, title
+            )
+
+            return new_appointment_id
+
+    else:
+
+        url = f"https://rest.gohighlevel.com/v1/appointments/{appointment_id}"
+
+        headers = {"authorization": f"Bearer {GOHIGHLEVEL_TOKEN}"}
+
+        selected_slot = pytz.timezone("Europe/Berlin").localize(
+            datetime.strptime(start_time, "%d/%m/%Y-%H:%M")
+        )
+
+        end_at = selected_slot + timedelta(minutes=DURATION_MINUTES)
+
+        payload = {
+            "title": title,
+            "selectedSlot": selected_slot.isoformat(),
+            "endAt": end_at.isoformat(),
+            "selectedTimezone": TIMEZONE,
+            "calendarId": calendar_id,
+        }
+
+        response = requests.put(url, headers=headers, json=payload, timeout=10)
+
+        if response.status_code != 200:
+            print(f"❌ Error al actualizar cita: {response.text}")
+            print(json.dumps(payload, indent=4))
+            return None
+
+        data = response.json()
+
+        return data.get("id")
+
+
+def delete_appointment(appointment_id: str):
+
+    # Api reference: https://public-api.gohighlevel.com/#d9bf928c-7edf-48cc-8a1a-e2d21ee946ef
 
     url = f"https://rest.gohighlevel.com/v1/appointments/{appointment_id}"
 
     headers = {"authorization": f"Bearer {GOHIGHLEVEL_TOKEN}"}
 
-    selected_slot = pytz.timezone("Europe/Berlin").localize(
-        datetime.strptime(start_time, "%d/%m/%Y-%H:%M")
-    )
-
-    payload = {
-        "title": title,
-        "selectedSlot": selected_slot.isoformat(),
-        "selectedTimezone": TIMEZONE,
-    }
-
-    response = requests.put(url, headers=headers, json=payload, timeout=10)
+    response = requests.delete(url, headers=headers, timeout=10)
 
     if response.status_code != 200:
         print(f"❌ Error al actualizar cita: {response.text}")
-        return None
+        return False
 
-    data = response.json()
-
-    return data.get("id")
-
-
-def add_cols():
-
-    gc = gspread.oauth(scopes=SCOPES, authorized_user_filename="token.json")
-
-    sheet = gc.open_by_key(SPREADSHEET_ID)
-
-    worksheet = sheet.get_worksheet(0)
-
-    headers = worksheet.row_values(1)
-
-    if "appointment_id" not in headers:
-
-        worksheet.add_cols(1)
-        worksheet.update_cell(1, len(headers) + 1, "appointment_id")
-        headers.append("appointment_id")
-
-    if "last_checked" not in headers:
-
-        worksheet.add_cols(1)
-        worksheet.update_cell(1, len(headers) + 1, "last_checked")
+    return True
 
 
 def correct_spelling(service: str):

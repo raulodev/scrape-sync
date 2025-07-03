@@ -71,7 +71,7 @@ def register():
 
         if appointment_id:
             # update status
-            if status != State.CANCELLED.value:
+            if status != State.CANCELLED_OR_UPDATED.value:
                 appointment[9] = State.UNCHANGED.value
             already_registered += 1
             continue
@@ -143,7 +143,7 @@ def update():
         appointment_id = appointment[7]
         status = appointment[9]
 
-        if not appointment_id or State.MODIFIED.value not in status:
+        if not appointment_id or status in (State.NEW.value, State.UNCHANGED.value):
             continue
 
         date = appointment[1]
@@ -194,7 +194,11 @@ def update():
         if new_id_or_is_updated:
             print(f"✅ Actualizada la cita: {new_id_or_is_updated}")
             appointment[7] = new_id_or_is_updated
-            appointment[9] = State.UNCHANGED.value
+
+            if status == State.CANCELLED_OR_UPDATED.value:
+                appointment[9] = State.CANCELLED_OR_UPDATED.value
+            else:
+                appointment[9] = State.UNCHANGED.value
 
     write_to_sheet_from_gohighlevel(appointments)
 

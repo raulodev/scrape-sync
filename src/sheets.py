@@ -16,7 +16,7 @@ from settings import SCOPES, SPREADSHEET_ID
 class State(str, enum.Enum):
     NEW = "New"
     MODIFIED = "Modified"  # when the row is updated from estetical website
-    CANCELLED = "Cancelled or Outdated"
+    CANCELLED_OR_UPDATED = "Cancelled or Outdated"
     UNCHANGED = "Unchanged"  # When the row modified is saved in gohighlevel
 
 
@@ -92,13 +92,16 @@ def write_to_sheet_from_estetical(new_values: list):
             new_info = new_df.loc[new_df["id"] == new_id]
 
             # If no new data is found then the current appointment is cancelled
-            if new_info.empty and current.get("status") != State.CANCELLED.value:
+            if (
+                new_info.empty
+                and current.get("status") != State.CANCELLED_OR_UPDATED.value
+            ):
 
                 print("❌ Cita cancelada o fuera de fecha:", new_id)
                 current_df.at[index, "last_checked"] = datetime.now().strftime(
                     "%d/%m/%Y  %H:%M"
                 )
-                current_df.at[index, "status"] = State.CANCELLED.value
+                current_df.at[index, "status"] = State.CANCELLED_OR_UPDATED.value
 
             # If there is new info
             elif not new_info.empty:

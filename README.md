@@ -31,7 +31,25 @@ and use google sheets to store the data.
     ```console
     python src/main.py --help
     ```
+## Usage
 
+1. Extract data from estetical and update google sheets
+
+    ```console
+    ppython src/main.py extract
+    ```
+
+2. Register new appointments from google sheets to GoHighLevel
+
+    ```console
+    python src/main.py register
+    ```
+
+3. Update appointments in GoHighLevel
+
+    ```console
+    python src/main.py update
+    ```
 
 ## References
 

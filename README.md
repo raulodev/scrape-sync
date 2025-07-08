@@ -36,7 +36,7 @@ and use google sheets to store the data.
 1. Extract data from estetical and update google sheets
 
     ```console
-    ppython src/main.py extract
+    python src/main.py extract
     ```
 
 2. Register new appointments from google sheets to GoHighLevel

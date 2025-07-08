@@ -187,6 +187,8 @@ def write_to_sheet_from_estetical(new_values: list):
 
 def write_to_sheet_from_gohighlevel(new_values: list):
 
+    print("⏳ Actualizando datos de GoHighLevel...")
+
     worksheet = get_worksheet()
 
     current_values = worksheet.get_values("A:J")

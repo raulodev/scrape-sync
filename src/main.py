@@ -10,6 +10,7 @@ from gohighlevel import (
     create_contact,
     search_contact,
     update_appointments,
+    delete_appointment,
 )
 from sheets import (
     State,
@@ -130,7 +131,6 @@ def update():
     Update appointments in GoHighLevel
 
     - Only take rows with status == UNCHANGED
-
     """
     create_google_credential_file()
 
@@ -155,50 +155,63 @@ def update():
         calendar_id = CALENDARS.get(service)
         therapist_id = THERAPISTS.get(therapists)
 
-        if not calendar_id:
-            print(f"⚠️ No se encontró calendario para {service}")
-            continue
+        if status == State.CANCELLED_OR_UPDATED.value:  # delete appointment
 
-        contact = None
+            try:
+                is_deleted = delete_appointment(appointment_id)
 
-        try:
-            contact = search_contact(patient.lower())
-        except Exception as exc:
-            print(f"⚠️ Error al buscar contacto para {patient}: {exc}")
-            continue
+                if is_deleted:
+                    print(f"✅ Eliminada la cita: {appointment_id}")
+                    appointment[7] = None
 
-        if not contact:
-            print(f"✖️  No fue encontrado un contacto para {patient}")
+            except Exception as exc:
+                print(f"⚠️ Error al eliminar cita {appointment_id}: {exc}")
 
-            attempts = 0
-            while not contact and attempts < 5:
-                try:
-                    contact = create_contact(patient, phone)
-                    print(f"✅ Se creó el contacto {contact}")
-                    break
-                except Exception as exc:
-                    print(f"⚠️ Error al crear contacto para {patient}: {exc}")
-                attempts += 1
+        elif State.MODIFIED.value in status:
 
-        title = f"{correct_spelling(service)} - {patient} - {therapists}"
+            if not calendar_id:
+                print(f"⚠️ No se encontró calendario para {service}")
+                continue
 
-        new_id_or_is_updated = update_appointments(
-            appointment_id,
-            f"{date}-{start_time}",
-            title,
-            calendar_id,
-            contact,
-            therapist_id,
-        )
+            contact = None
 
-        if new_id_or_is_updated:
-            print(f"✅ Actualizada la cita: {new_id_or_is_updated}")
-            appointment[7] = new_id_or_is_updated
+            try:
+                contact = search_contact(patient.lower())
+            except Exception as exc:
+                print(f"⚠️ Error al buscar contacto para {patient}: {exc}")
 
-            if status == State.CANCELLED_OR_UPDATED.value:
-                appointment[9] = State.CANCELLED_OR_UPDATED.value
-            else:
-                appointment[9] = State.UNCHANGED.value
+            if not contact:
+                print(f"✖️  No fue encontrado un contacto para {patient}")
+
+                attempts = 0
+                while not contact and attempts < 5:
+                    try:
+                        contact = create_contact(patient, phone)
+                        print(f"✅ Se creó el contacto {contact}")
+                        break
+                    except Exception as exc:
+                        print(f"⚠️ Error al crear contacto para {patient}: {exc}")
+                    attempts += 1
+
+            title = f"{correct_spelling(service)} - {patient} - {therapists}"
+
+            new_id_or_is_updated = update_appointments(
+                appointment_id,
+                f"{date}-{start_time}",
+                title,
+                calendar_id,
+                contact,
+                therapist_id,
+            )
+
+            if new_id_or_is_updated:
+                print(f"✅ Actualizada la cita: {new_id_or_is_updated}")
+                appointment[7] = new_id_or_is_updated
+
+                if status == State.CANCELLED_OR_UPDATED.value:
+                    appointment[9] = State.CANCELLED_OR_UPDATED.value
+                else:
+                    appointment[9] = State.UNCHANGED.value
 
     write_to_sheet_from_gohighlevel(appointments)
 
